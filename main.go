@@ -142,22 +142,25 @@ func enable2FA(c *gin.Context) {
 		return
 	}
 
+	cmd := exec.Command("qrencode", secret.URL(), "-o", filepath.Join(".", "qr", "qr.png"))
+	_, err = cmd.CombinedOutput()
+	if err != nil {
+		// disable 2FA if QR code generation fails
+		user.Secret = ""
+		user.TwoFAEnabled = false
+		users[req.Username] = user
+
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
 	// Save the secret in the user object
 	user.Secret = secret.Secret()
 	user.TwoFAEnabled = true
 	users[req.Username] = user
 
-	fmt.Println(secret.URL())
-
-	cmd := exec.Command("qrencode", secret.URL(), "-o", filepath.Join(".", "qr", "qr.png"))
-	_, err = cmd.CombinedOutput()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
+	// Generate the URL for the QR code
 	scheme := GetScheme(c)
 	url := fmt.Sprintf(scheme + "://" + c.Request.Host + "/auth/qr/qr.png")
-	c.JSON(http.StatusOK, gin.H{"url": url})
-	//c.JSON(http.StatusOK, gin.H{"secret": secret.Secret(), "url": secret.URL()})
+	c.JSON(http.StatusCreated, gin.H{"message": "QR code created successfully, 2FA enabled", "url": url})
 }
