@@ -1,7 +1,10 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
+	"os/exec"
+	"path/filepath"
 
 	"github.com/gin-gonic/gin"
 	"github.com/pquerna/otp/totp"
@@ -28,8 +31,16 @@ func main() {
 	auth.POST("/login", login)
 	auth.POST("/enable-2fa", enable2FA)
 	auth.POST("/verify", verify2FA)
-
+	auth.Static("/qr", filepath.Join(".", "qr"))
 	router.Run(":8080")
+}
+
+func GetScheme(c *gin.Context) string {
+	scheme := "http"
+	if c.Request.TLS != nil {
+		scheme = "https"
+	}
+	return scheme
 }
 
 // signUp handles user registration
@@ -123,11 +134,11 @@ func enable2FA(c *gin.Context) {
 	secret, err := totp.Generate(totp.GenerateOpts{
 		Issuer:      "MyApp",
 		AccountName: user.Username,
-		Period:      60,
+		Period:      30,
 	})
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error generating QR code"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error generating QR code URL"})
 		return
 	}
 
@@ -136,5 +147,17 @@ func enable2FA(c *gin.Context) {
 	user.TwoFAEnabled = true
 	users[req.Username] = user
 
-	c.JSON(http.StatusOK, gin.H{"secret": secret.Secret(), "url": secret.URL()})
+	fmt.Println(secret.URL())
+
+	cmd := exec.Command("qrencode", secret.URL(), "-o", filepath.Join(".", "qr", "qr.png"))
+	_, err = cmd.CombinedOutput()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	scheme := GetScheme(c)
+	url := fmt.Sprintf(scheme + "://" + c.Request.Host + "/auth/qr/qr.png")
+	c.JSON(http.StatusOK, gin.H{"url": url})
+	//c.JSON(http.StatusOK, gin.H{"secret": secret.Secret(), "url": secret.URL()})
 }
