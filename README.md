@@ -130,6 +130,5 @@ The code uses standard HTTP status codes to indicate the success or failure of e
 The code uses the `totp` package to generate and verify TOTP (Time-based One-Time Password) codes for 2FA. TOTP is a common 2FA method that uses a secret key and the current time to generate a one-time code. The user can use this code to gain access to the system after logging in.
 
 ## Links of interest
-[QR Code Generation on Linux](https://www.linux-magazine.com/Online/Features/Generating-QR-Codes-in-Linux)
+[QR Code Generation on Linux](https://www.linux-magazine.com/Online/Features/Generating-QR-Codes-in-Linux)  
 [Homebrew: The Missing Package Manager for macOS](https://brew.sh/)
-
